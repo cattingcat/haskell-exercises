@@ -31,6 +31,15 @@ instance OfKindType  Bool
 instance OfKindType  String         -- Which extension did we need
 instance OfKindType (Maybe (IO ())) -- to get /these/ to compile?
 
+
+
+-- 1 :: Int
+-- Int :: Type
+-- Maybe :: Type -> Type
+-- Maybe Int :: Type
+-- ReaderT :: Type -> (Type -> Type) -> Type -> Type
+-- ReaderT MyConfig (Either MyError) Int :: Type
+
 {-
   We can start with an intuition that the 'Type' kind is inhabited by /things
   with a runtime value/. This isn't 100% accurate, but gives us somewhere to
@@ -97,6 +106,10 @@ instance MyFavouriteBifunctor (,)
   some kinds @a@ and @b@, and that's it. However, there's one more that is
   worth mentioning: 'Constraint'. This is the kind of constraints:
 -}
+
+-- Eq Int :: Constraint
+-- Eq     :: Type -> Constraint
+-- foo :: Eq a => a -> Bool
 
 class Whoa (constraint :: Constraint) -- Also from Data.Kind
 instance Whoa (Eq Int)

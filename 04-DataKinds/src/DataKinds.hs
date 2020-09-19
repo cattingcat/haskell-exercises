@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs             #-}
 {-# LANGUAGE KindSignatures    #-}
+{-# OPTIONS_GHC -Wincomplete-patterns #-}
 
 {- Today's -} module {- will focus on one of my favourite GHC magic tricks: the
 -} DataKinds {- extension. We'll see how and -} where {- to use it to enhance
@@ -68,6 +69,15 @@ instance NaturalKind 'Zero
 instance NaturalKind ('Successor 'Zero)
 instance NaturalKind ('Successor ('Successor 'Zero))
 
+
+-- Nat :: Type   -> Kind
+-- Zero :: Nat   -> a :: Nat
+
+
+-- Kind                    Nat
+-- Type       Nat         'Zero
+-- Literals   Zero         ----
+
 {-
   A thing worth mentioning here is that things of kind 'Natural' /don't have
   any values/. They /only/ exist at the type-level. There is no value that has
@@ -81,6 +91,10 @@ data Vector (length :: Natural) (a :: Type) where
   VNil  :: Vector 'Zero a
   VCons :: a -> Vector n a -> Vector ('Successor n) a
 
+
+--foo :: Vector 5 Int -> Int
+--foo arr = get 3 arr
+
 {-
   What we have here is a list, as we have seen before, but with a twist: the
   type of this list (which we'll call a "vector") contains the length of the
@@ -90,6 +104,10 @@ data Vector (length :: Natural) (a :: Type) where
 
 head :: Vector ('Successor n) a -> a
 head (VCons head _) = head
+
+headUnsafe :: Vector n a -> Maybe a
+headUnsafe (VCons head _) = Just head
+headUnsafe (VNil) = Nothing
 
 {-
   'head' is a /total/ function. We don't have to match on the 'VNil' case

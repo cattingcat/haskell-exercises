@@ -1,3 +1,6 @@
 */dist/*
+*/.stack-work/*
+*.idea/*
+*.yaml.lock*
 */dist-newstyle/*
 *.ghc.environment*

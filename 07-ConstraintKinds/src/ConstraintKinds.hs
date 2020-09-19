@@ -86,6 +86,7 @@ data Dict (c :: Constraint) where
   pattern-matching on a @Dict@ will bring its contents into scope. This allows
   us to write functions like this:
 -}
+--eq :: Eq a => a -> a -> Bool
 
 eq :: Dict (Eq a) -> a -> a -> Bool
 eq Dict x y = x == y

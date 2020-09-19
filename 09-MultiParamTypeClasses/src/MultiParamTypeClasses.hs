@@ -200,7 +200,7 @@ instance Sneaky Float Float where
 -}
 
 -- -- UNCOMMENT ME
--- huh = familiar (3.0 :: Float)
+--huh = familiar (3.0 :: Float)
 
 {-
   As we're starting to learn, GHC is actually pretty good at telling us what is
@@ -236,8 +236,8 @@ heh = familiar (3.0 :: Double)
 -}
 
 -- -- UNCOMMENT ME
--- instance {-# INCOHERENT #-} a ~ b => Sneaky a b where
---   familiar = id
+--instance {-# INCOHERENT #-} a ~ b => Sneaky a b where
+-- familiar = id
 
 {-
   Here's a scary-looking line of code, right? What we're saying here is, if you

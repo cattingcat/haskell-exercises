@@ -3,6 +3,9 @@
 {-# LANGUAGE PolyKinds     #-}
 {-# LANGUAGE TypeFamilies  #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 module Exercises where
 
 import Data.Kind    (Constraint, Type)
@@ -16,7 +19,7 @@ import GHC.TypeLits (Symbol)
 
 -- | Let's look at the following type family to build a constraint:
 
-type family All (c :: Type -> Constraint) (xs :: [Type]) :: Constraint where
+type family All (c :: k -> Constraint) (xs :: [k]) :: Constraint where
   All c '[] = ()
   All c (x ': xs) = (c x, All c xs)
 
@@ -71,6 +74,7 @@ f (Tagged x) = putStrLn (show x <> " is important!")
 
 -- | We can use the following to test type-level equivalence.
 
+type (:=:) :: k -> m -> Type
 data a :=: b where
   Refl :: a :=: a
 
@@ -78,10 +82,13 @@ data a :=: b where
 
 -- | b. Does @PolyKinds@ make a difference to this kind?
 
+-- Yes: k -> k -> Type
+
 -- | c. Regardless of your answer to part (b), is this the most general kind we
 -- could possibly give this constructor? If not (hint: it's not), what more
 -- general kind could we give it, and how would we tell this to GHC?
 
+-- type (:=:) :: k -> m -> Type
 
 
 
@@ -108,7 +115,7 @@ data SBool (b :: Bool) where
   STrue  :: SBool 'True
   SFalse :: SBool 'False
 
--- type instance Sing ...
+type instance Sing (b :: Bool) = SBool b
 
 -- | b. Repeat the process for the @Nat@ kind. Again, if you're on the right
 -- lines, this is very nearly a copy-paste job!
@@ -119,6 +126,8 @@ data SNat (n :: Nat) where
   SZ :: SNat 'Z
   SS :: SNat n -> SNat ('S n)
 
+type instance Sing (n :: Nat) = SNat n
+-- (S (S Z))  ->   SNat (S (S Z)) only one term:  SS (SS SZ)
 
 
 
@@ -151,13 +160,19 @@ data Strings (n :: Nat) where
 -- | a. Write this type's definition: If you run the above example, the
 -- compiler should do a lot of the work for you...
 
-data Sigma (f :: Nat -> Type) where
-  -- Sigma :: ... -> Sigma f
+--data Sigma (f :: Nat -> Type) where
+--   Sigma :: Sing n -> f n -> Sigma f
+
+exampleSigma :: [Sigma Strings]
+exampleSigma = [ Sigma         SZ   SNil ]
 
 -- | b. Surely, by now, you've guessed this question? Why are we restricting
 -- ourselves to 'Nat'? Don't we have some more general way to talk about
 -- singletons? The family of singletons? Any type within the family of
 -- singletons? Sing it with me! Generalise that type!
+
+data Sigma (f :: k -> Type) where
+   Sigma :: Sing n -> f n -> Sigma f
 
 -- | c. In exercise 5, we wrote a 'filter' function for 'Vector'. Could we
 -- rewrite this with a sigma type, perhaps?
@@ -166,10 +181,29 @@ data Vector (a :: Type) (n :: Nat) where -- @n@ and @a@ flipped... Hmm, a clue!
   VNil  ::                    Vector a  'Z
   VCons :: a -> Vector a n -> Vector a ('S n)
 
+filterV :: forall a n . (a -> Bool) -> Vector a n -> Sigma (Vector a)
+filterV _ VNil = Sigma SZ VNil
+filterV p (VCons a as) = if p a then appendA a s else s
+  where
+    s :: Sigma (Vector a)
+    s = filterV p as
+
+    appendA :: a -> Sigma (Vector a) -> Sigma (Vector a)
+    appendA a (Sigma s v) = Sigma (SS s) (VCons a v)
 
 
 
+instance Show a => Show (Vector a n) where
+  show VNil = "VNil"
+  show (VCons a as) = "VCons " ++ show a ++ "("++ show as ++")"
 
+tstfilterV = let
+    sg = filterV (> 3) (VCons 2 (VCons 3 (VCons 4 (VCons 2 VNil))))
+
+    foo :: Show a => Sigma (Vector a) -> String
+    foo (Sigma _ v) = show v
+
+    in foo sg
 
 {- SIX -}
 
@@ -197,17 +231,38 @@ data ServerData
 -- server data.
 
 data Communication (label :: Label) where
+  CliData :: ClientData -> Communication Client
+  SrvData :: ServerData -> Communication Server
   -- {{Fill this space with your academic excellence}}
 
 -- | b. Write a singleton for 'Label'.
+data SLabel (l :: Label) where
+  SClient :: SLabel 'Client
+  SServer :: SLabel 'Server
+
+type instance Sing (l :: Label) = SLabel l
 
 -- | c. Magically, we can now group together blocks of data with differing
 -- labels using @Sigma Communication@, and then pattern-match on the 'Sigma'
 -- constructor to find out which packet we have! Try it:
 
+serverLog :: [Sigma Communication] -> [ServerData]
+serverLog [] = []
+serverLog (Sigma SClient _ : cs) = serverLog cs
+serverLog (Sigma SServer (SrvData d) : cs) = d : serverLog cs
+
+-- MonadWriter (Communication Server) m => m ()
+-- [Communication Server] -> [Communication Client] -> [Sigma Communication]
 -- serverLog :: [Sigma Communication] -> [ServerData]
--- serverLog = error "YOU CAN DO IT"
+
+makeLogEntry :: String -> Sigma Communication
+makeLogEntry "Server" = Sigma SServer (SrvData (ServerData True ()) )
 
 -- | d. Arguably, in this case, the Sigma type is overkill; what could we have
 -- done, perhaps using methods from previous chapters, to "hide" the label
 -- until we pattern-matched?
+
+serverLog' :: [Communication s] -> [ServerData]
+serverLog' [] = []
+serverLog' (SrvData d : cs) = d : serverLog' cs
+serverLog' (_ : cs) = serverLog' cs
